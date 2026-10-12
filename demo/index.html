@@ -112,7 +112,7 @@
   /* The card is taller than it looks: the "next switch" row wraps to two lines
      in Chinese, so 130px of headroom cut the first two rows off the top of the
      frame. 240px clears the tallest state. */
-  body[data-view="card"] .stage { padding: 240px 0 0 50px; }
+  body[data-view="card"] .stage { padding: 360px 0 0 50px; }
 </style>
 <script>
   // The component's own stylesheet comes from client.js so these images cannot
@@ -185,7 +185,11 @@
       peakReason: '工作日高峰时段，当前按标准价计价。',
       offReason: '工作日非高峰时段，当前按空闲时段计价。',
       alertLead: '切换提醒', alertOff: '关闭', alertMinutes: '提前 {n} 分钟',
-      notify: '系统通知', notifyHint: '开启时浏览器会询问一次权限。',
+      notify: '系统通知',
+      notifyNotePrompt: '未开启 · 点一下会问一次权限',
+      notifyNoteDenied: '未开启 · 权限被拒绝，点一下再试',
+      notifyNoteUnsupported: '未开启 · 本机没有通知接口',
+      notifyNoteIdle: '未开启 · 点一下开启',
       alertToPeak: '{at} 进入高峰时段',
       alertToOff: '{at} 进入空闲时段',
       alertToPeakBody: '还有 {left}。价格翻倍，要发就趁现在。',
@@ -200,7 +204,11 @@
       peakReason: 'Peak window on a working day, currently billed at the standard rate.',
       offReason: 'Off-peak window on a working day, currently billed at the off-peak rate.',
       alertLead: 'Warn before', alertOff: 'Off', alertMinutes: '{n} min before',
-      notify: 'System notification', notifyHint: 'The browser will ask for permission once.',
+      notify: 'System notification',
+      notifyNotePrompt: 'Off · pressing this asks for permission once',
+      notifyNoteDenied: 'Off · permission was refused, press to try again',
+      notifyNoteUnsupported: 'Off · this machine has no notification API',
+      notifyNoteIdle: 'Off · press to turn on',
       alertToPeak: 'Peak starts at {at}',
       alertToOff: 'Off-peak starts at {at}',
       alertToPeakBody: 'In {left}. The rate doubles — send now if you are going to send.',
@@ -242,7 +250,22 @@
   // client.js, scaled down to the one value each control is being photographed
   // at: the real select carries all seven choices, the real checkbox carries the
   // browser's own permission state.
+  //
+  // `?notify=` picks which of the four states the row is in, because the real row
+  // reads `Notification.permission` and a `file://` page cannot be talked into a
+  // refusal. The values match `notifySupport()`'s vocabulary: `prompt` (nothing
+  // tried yet, the default), `denied`, `unsupported`, and `idle` (a press that was
+  // dismissed — `notifyHint === 'default'`).
   const LEAD = 2;
+  const notify = ['prompt', 'denied', 'unsupported', 'idle'].includes(params.get('notify'))
+    ? params.get('notify')
+    : 'prompt';
+  const NOTE = {
+    prompt: COPY.notifyNotePrompt,
+    denied: COPY.notifyNoteDenied,
+    unsupported: COPY.notifyNoteUnsupported,
+    idle: COPY.notifyNoteIdle,
+  };
   const alertControls = () => el('div', { class: 'peak-badge-controls' },
     el('div', { class: 'peak-badge-control' },
       el('label', { class: 'peak-badge-key', for: 'peak-badge-alert-lead', text: COPY.alertLead }),
@@ -259,10 +282,15 @@
         return select;
       })()),
     el('div', { class: 'peak-badge-control' },
-      el('label', { class: 'peak-badge-check' },
-        el('input', { type: 'checkbox', 'data-dsh-peak-badge': 'alert-notify' }),
-        el('span', { text: COPY.notify }))),
-    el('div', { class: 'peak-badge-hint', text: COPY.notifyHint }));
+      el('label', { class: 'peak-badge-check', 'data-unavailable': notify === 'unsupported' ? 'yes' : 'no' },
+        (() => {
+          const box = el('input', { type: 'checkbox', 'data-dsh-peak-badge': 'alert-notify' });
+          // Only the absent API is disabled; a refusal stays pressable on purpose.
+          if (notify === 'unsupported') box.setAttribute('disabled', '');
+          return box;
+        })(),
+        el('span', { text: COPY.notify }),
+        el('span', { class: 'peak-badge-note', 'data-dsh-peak-badge': 'alert-note', text: NOTE[notify] }))));
 
   function renderCard() {
     return el('div', {

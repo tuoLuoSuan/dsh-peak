@@ -84,6 +84,11 @@ const SHOTS = [
   { page: '_shot.html', file: 'card-off.png', query: '?view=card&theme=light', clip: '.peak-badge-root', union: '.peak-badge-card', scale: 4 },
   { page: '_shot.html', file: 'card-peak.png', query: '?view=card&state=peak&theme=light', clip: '.peak-badge-root', union: '.peak-badge-card', scale: 4 },
   { page: '_shot.html', file: 'card-en.png', query: '?view=card&lang=en&theme=light', clip: '.peak-badge-root', union: '.peak-badge-card', scale: 4 },
+  // The four states of the notification row, because the complaint that started
+  // this was that one of them rendered as nothing at all. `?notify=` fakes the
+  // permission state a `file://` page cannot reach.
+  { page: '_shot.html', file: 'card-denied.png', query: '?view=card&theme=light&notify=denied', clip: '.peak-badge-root', union: '.peak-badge-card', scale: 4 },
+  { page: '_shot.html', file: 'card-unsupported.png', query: '?view=card&theme=light&notify=unsupported', clip: '.peak-badge-root', union: '.peak-badge-card', scale: 4 },
   // The pre-switch notice. It is `position: fixed`, so it is measured in viewport
   // coordinates and the page must not be scrolled — which is why it gets its own
   // page rather than being photographed on top of a card shot.

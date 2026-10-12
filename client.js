@@ -545,8 +545,11 @@ body[data-ds-dark-theme] .peak-badge-select { background: var(--dsw-static-neutr
   font: inherit; font-size: 12px; color: var(--dsw-alias-label-primary); cursor: pointer;
 }
 .peak-badge-check[data-unavailable="yes"] { color: var(--dsw-alias-label-secondary); cursor: default; }
+/* The status words beside the box. Wraps rather than pushing the box out of the
+   card, and never shrinks below legibility: this is the line that explains a
+   refusal, so it must not be the thing that gets clipped. */
+.peak-badge-note { font-size: 11px; color: var(--dsw-alias-label-secondary); min-width: 0; }
 .peak-badge-check input { width: 14px; height: 14px; margin: 0; accent-color: var(--dsw-alias-brand-primary, #4176e6); }
-.peak-badge-hint { font-size: 11px; line-height: 1.5; color: var(--dsw-alias-label-secondary); }
 /* The pre-switch notice.
    Fixed to the viewport, not to the chip: the clock that raises it runs whether
    or not a conversation is open, so the notice has to be able to appear when the
@@ -643,8 +646,10 @@ body[data-ds-dark-theme] .peak-badge-select { background: var(--dsw-static-neutr
       alertMinutes: '提前 {n} 分钟',
       notify: '系统通知',
       notifyUnsupported: '本机不支持系统通知',
-      notifyDenied: '浏览器已拒绝通知权限',
-      notifyHint: '开启时浏览器会询问一次权限。',
+      notifyNoteDenied: '未开启 · 权限被拒绝，点一下再试',
+      notifyNoteUnsupported: '未开启 · 本机没有通知接口',
+      notifyNotePrompt: '未开启 · 点一下会问一次权限',
+      notifyNoteIdle: '未开启 · 点一下开启',
       alertToPeak: '{at} 进入高峰时段',
       alertToOff: '{at} 进入空闲时段',
       alertToPeakBody: '还有 {left}。价格翻倍，要发就趁现在。',
@@ -679,8 +684,10 @@ body[data-ds-dark-theme] .peak-badge-select { background: var(--dsw-static-neutr
       alertMinutes: '{n} min before',
       notify: 'System notification',
       notifyUnsupported: 'not available in this browser',
-      notifyDenied: 'the browser refused permission',
-      notifyHint: 'The browser will ask for permission once.',
+      notifyNoteDenied: 'Off · permission was refused, press to try again',
+      notifyNoteUnsupported: 'Off · this machine has no notification API',
+      notifyNotePrompt: 'Off · pressing this asks for permission once',
+      notifyNoteIdle: 'Off · press to turn on',
       alertToPeak: 'Peak starts at {at}',
       alertToOff: 'Off-peak starts at {at}',
       alertToPeakBody: 'In {left}. The rate doubles — send now if you are going to send.',
@@ -824,6 +831,16 @@ body[data-ds-dark-theme] .peak-badge-select { background: var(--dsw-static-neutr
      * user changed conversations.
      */
     const alert = { leadMinutes: ALERT_DEFAULT_MINUTES, notify: false };
+    /**
+     * The last answer the permission machinery gave, for the row to report.
+     *
+     * `null` means "nothing has been tried in this session", which is not the
+     * same as a refusal: the row says a different thing in each case. Without
+     * this the box could only ever be on or off, and a press that ended in
+     * `denied` — or in `default`, which is what a dismissed prompt leaves behind
+     * — looked exactly like a press that did nothing at all.
+     */
+    let notifyHint = null;
     let announcedKey = null;
     let toastNode = null;
     let toastDispose = null;
@@ -846,6 +863,12 @@ body[data-ds-dark-theme] .peak-badge-select { background: var(--dsw-static-neutr
       } catch {
         /* private mode, disabled storage, or a half-written value */
       }
+      // The stored preference is a wish, not a fact: permission can be revoked
+      // between sessions from the browser's own settings, and a box that stays
+      // ticked while every notification is refused would be a lie. Dropping the
+      // wish is also what makes the row honest — the hint below then reports the
+      // real state, which is the one thing the previous code never did.
+      if (alert.notify && notifySupport() !== 'granted') alert.notify = false;
     }
 
     function writeAlertSettings() {
@@ -1046,6 +1069,7 @@ body[data-ds-dark-theme] .peak-badge-select { background: var(--dsw-static-neutr
       const chooseNotify = (event) => {
         if (event.target.checked !== true) {
           alert.notify = false;
+          notifyHint = null;
           writeAlertSettings();
           rerender();
           return;
@@ -1055,17 +1079,37 @@ body[data-ds-dark-theme] .peak-badge-select { background: var(--dsw-static-neutr
         // rather than leave a setting behind that can never fire. Older engines
         // return undefined from `requestPermission()` and expect a callback, so
         // both shapes are accepted and neither is assumed.
+        // The answer arrives in two shapes and BOTH are real. Modern engines
+        // resolve `requestPermission()` with the permission string — `'granted'`,
+        // `'denied'`, `'default'` — while the legacy callback form passes a
+        // boolean. Comparing against `true` alone therefore threw away every
+        // modern grant: the box sprang back and the row said "nothing tried yet",
+        // which is exactly the report that started this. Accept either shape.
+        const allowed = (answer) => answer === true || answer === 'granted';
         const settle = (granted) => {
-          alert.notify = granted === true;
+          alert.notify = allowed(granted);
+          // `'default'` is its own answer, not a failure: it is what a prompt the
+          // user dismissed leaves behind, and it is undone by pressing again. The
+          // row reports which of the two happened instead of silently reverting
+          // the box, which is what made the previous version look broken.
+          notifyHint = allowed(granted) ? null : notifySupport() === 'denied' ? 'denied' : 'default';
           writeAlertSettings();
           rerender();
         };
         try {
-          const asked = window.Notification.requestPermission();
+          // The two shapes, told apart by what comes back rather than by a version
+          // check. A thenable carries the permission string; engines that take a
+          // callback call it with the boolean, synchronously in every one I could
+          // find. `once` guards the case where an engine does both, so a single
+          // press can never settle twice.
+          let settled = false;
+          const once = (answer) => { if (!settled) { settled = true; settle(answer); } };
+          const asked = window.Notification.requestPermission(once);
           if (asked !== null && asked !== undefined && typeof asked.then === 'function') {
-            asked.then(settle, () => settle(false));
-          } else {
-            settle(window.Notification.permission === 'granted');
+            asked.then(once, () => once(false));
+          } else if (!settled) {
+            // The callback form that only looks at `permission` afterwards.
+            once(window.Notification.permission === 'granted');
           }
         } catch {
           settle(false);
@@ -1092,16 +1136,31 @@ body[data-ds-dark-theme] .peak-badge-select { background: var(--dsw-static-neutr
               type: 'checkbox',
               'data-dsh-peak-badge': 'alert-notify',
               checked: alert.notify,
-              disabled: !usable,
+              // Disabled only when the API is absent — that is the one case a
+              // press cannot change. A refusal is NOT one: the browser may grant
+              // on a later press once the user has changed its settings, and a
+              // dead control offers no way to find that out. `denied` already
+              // reports itself through the status text below.
+              disabled: support === 'unsupported',
               onChange: chooseNotify,
             }),
-            h('span', null, text.notify))),
-        usable
-          ? null
-          : h('div', { className: 'peak-badge-hint' }, support === 'denied' ? text.notifyDenied : text.notifyUnsupported),
-        usable && support === 'prompt' && !alert.notify
-          ? h('div', { className: 'peak-badge-hint' }, text.notifyHint)
-          : null);
+            h('span', null, text.notify),
+            // The status sits inside the label, beside the words it is about, so
+            // it can never be the line that scrolls out of the card — and a
+            // refused or dismissed request leaves a visible trace instead of a
+            // box that quietly springs back.
+            alert.notify
+              ? null
+              : h('span', {
+                  className: 'peak-badge-note',
+                  'data-dsh-peak-badge': 'alert-note',
+                }, support === 'unsupported'
+                  ? text.notifyNoteUnsupported
+                  : support === 'denied' || notifyHint === 'denied'
+                    ? text.notifyNoteDenied
+                    : notifyHint === 'default'
+                      ? text.notifyNoteIdle
+                      : text.notifyNotePrompt))));
     }
 
     const Main = React.memo(function PeakBadge() {

@@ -22,6 +22,13 @@
 |---|---|---|
 | <img src="https://raw.githubusercontent.com/tuoLuoSuan/dsh-peak-badge/main/docs/card-off.png" width="312" alt="卡片：中文空闲"> | <img src="https://raw.githubusercontent.com/tuoLuoSuan/dsh-peak-badge/main/docs/card-peak.png" width="312" alt="卡片：中文高峰"> | <img src="https://raw.githubusercontent.com/tuoLuoSuan/dsh-peak-badge/main/docs/card-en.png" width="312" alt="卡片：英文"> |
 
+底部那一行 `系统通知` 有四种状态，每种都把话写在勾选框旁边。左边是权限被拒（**还能再点一次**），
+右边是这台机器根本没有通知接口（**唯一会变灰的那种**）：
+
+| 权限被拒 | 没有通知接口 |
+|---|---|
+| <img src="https://raw.githubusercontent.com/tuoLuoSuan/dsh-peak-badge/main/docs/card-denied.png" width="312" alt="卡片：权限被拒绝"> | <img src="https://raw.githubusercontent.com/tuoLuoSuan/dsh-peak-badge/main/docs/card-unsupported.png" width="312" alt="卡片：没有通知接口"> |
+
 还差几分钟要切换时，右下角会主动弹一条，不用你去点开卡片：
 
 | 要进高峰了 | 要进空闲了 | 深色主题 |
@@ -43,8 +50,10 @@
 - 说过的边界不再重说，**换会话、切页面、重新挂载都不会再说一遍**。时钟绑在插件上而不是
   胶囊上，因为胶囊只在会话页存在，而「你正在看别的地方、准备起一个长任务」恰恰是最需要
   知道的时候。
-- 可选**系统通知**。勾上时浏览器会问一次权限；权限被拒或者这个环境根本没有这个 API 时，
-  卡片会写明是哪一种，而不是摆一个按了没反应的勾选框。
+- 可选**系统通知**。勾上时浏览器会问一次权限，四种结局都会写在勾选框旁边：还没试过、
+  被拒了（还能再点一次，改完浏览器设置就能开）、或者这个环境根本没有这个 API（唯一会
+  变灰的情形）。**勾选状态每次读取都会和浏览器对账**——权限被撤掉之后不会再显示一个
+  勾着却发不出通知的框。
 - 提醒本身**不改变任何计费行为，也不拦任何请求**。
 
 ## 计费规则
@@ -163,13 +172,22 @@ node verify-policy.mjs
 以及「同一条边界」的键到底稳不稳（时钟 30 秒一跳、提前量 2 分钟，键不稳就会连说四次）。
 
 然后是本文件里唯一一段**带状态**的验证：把 `#region policy` + `#region text` + `#region alert`
-三段一起抠出来，配一个**能手动走的时钟**和一个几十行的假 DOM，真的把时钟跑起来。
++ `#region view` 四段一起抠出来，配一个**能手动走的时钟**、几十行的假 DOM、一个把 `React.memo`
+当作恒等函数的 `React`，真的把时钟跑起来，也真的把那张卡片的设置行画出来读。
 验的是纯函数验不到的东西——一条边界只播一次、再跳四拍还是同一条通知、下一个边界会替换掉
 上一条、昨天的键不会让今天的边界闭嘴、提前量设成 0 就彻底安静、`document.body` 还没建好时
 **不消耗**那一次发言机会、自动消失走的是 `timer.timeout` 而不是被客户端的半场禁掉的裸
 `setTimeout`、偏好存得下也读得回、`{"leadMinutes":3}` 这种 select 画不出来的值被拒绝、
-系统通知要「用户勾了」**且**「浏览器给了权限」两个条件同时成立才发。这一段曾经抓到过一个真
-的时序依赖：`showToast` 靠一个由 `apply` 赋值的模块级变量拿定时器，而赋值在
+系统通知要「用户勾了」**且**「浏览器给了权限」两个条件同时成立才发。
+
+通知那一行现在是**画出来读**的，因为「点了没反应」是肉眼才发现的：四种结局各自的文案都在
+（没试过 / 被拒 / 环境没有这个 API / 默认未授权），被拒之后**仍可点**、只有 API 缺失才变灰，
+而按下之后走的是真的 `onChange` 加真的 promise 链，两种答案形态各走一遍
+（`requestPermission` 现代版 resolve 权限**字符串**，老版给回调传**布尔值**），并断言一次按下
+只结算一次。这一段抓到的第二个真 bug 就在这里：原来写的是 `granted === true`，于是现代引擎
+返回的 `'granted'` 被判成没给权限，框自己弹回去、文案还说「还没试过」——正是用户报的那句
+「点了没反应」。改成 `answer === true || answer === 'granted'` 之后才通。
+这一段还曾经抓到过一个真的时序依赖：`showToast` 靠一个由 `apply` 赋值的模块级变量拿定时器，而赋值在
 `startAlertClock` 后面——第一次播报（同步发生的）就没有自动消失。现在
 `startAlertClock` 自己认领那个定时器，顺序不再能被写反。
 
@@ -183,12 +201,12 @@ TZ=Asia/Shanghai        node verify-policy.mjs
 TZ=Pacific/Kiritimati   node verify-policy.mjs
 ```
 
-四个时区都是 183 条全过。把 `peakState` 里的 `getUTC*` 换成 `get*`（一个很自然的
+四个时区都是 200 条全过。把 `peakState` 里的 `getUTC*` 换成 `get*`（一个很自然的
 「简化」），这套断言立刻挂。验证过，不是推测。
 
 退出码按本工作区的约定分三种：`0` 全过，`1` 有断言挂了（**代码错了**），
 `2` 根本没跑起来（与代码无关）。加了 `--dump` 会把抠出来的那段代码印出来。
-最后还压了一条底线：跑过的条数少于预期（现在是 183）也一样按 1 退出，
+最后还压了一条底线：跑过的条数少于预期（现在是 200）也一样按 1 退出，
 否则「某个小节整段没跑」会打印成「0 passed, 0 failed」然后安安静静地返回 0。
 
 > 关于这套断言的可信度：写它的时候，我**手算的期望值错了六次，机器每次都对**。
@@ -492,6 +510,11 @@ node demo/shoot.mjs
 再放大也不糊。每张图的倍率写在 `demo/shoot.mjs` 的 `SHOTS` 里。图片在 README 里显示成
 300 px（胶囊）和 312 px（卡片与提醒条），这两个数字也是写在 `<img>` 标签上的：Markdown 的
 `![]()` 语法带不了 `width`，所以这里用的是 HTML。
+
+卡片截图里那四种通知状态不是四张手改的图，是同一个页面加 `?notify=prompt|denied|unsupported|idle`
+拍的——真的权限由浏览器给，`file://` 页面骗不到，所以这个查询参数是唯一能把「权限被拒」
+拍下来的办法。demo 页只仿制 CSS，那一段行内文案是照 `renderAlertControls` 抄的，改那边记得改
+`demo/index.html` 的 `NOTE` 表。
 
 提醒条是 `position: fixed`，量到的是**视口坐标**，所以它拿的是单独一张页面
 （`?view=toast`）、不是在卡片那张上面叠着拍——页面一旦滚动，两者就对不上了。

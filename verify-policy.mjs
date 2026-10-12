@@ -665,7 +665,7 @@ if (policy !== undefined) {
   // The clock is driven through the real `#region alert` code, extracted the same
   // way the policy is, over a DOM small enough to read.
   {
-    const ALERT_REGIONS = ['policy', 'text', 'alert'];
+    const ALERT_REGIONS = ['policy', 'text', 'alert', 'view'];
     const region = (name) => {
       const at = source.indexOf(`// #region ${name}`);
       const end = source.indexOf('// #endregion', at);
@@ -674,7 +674,7 @@ if (policy !== undefined) {
     };
     const pieces = ALERT_REGIONS.map(region);
     const alertSource = pieces.every((piece) => piece !== null)
-      ? `${pieces.join('\n')}\nreturn { alert, alertPlan, peakState, startAlertClock, readAlertSettings, writeAlertSettings, notifySupport, closeToast, showToast, ALERT_CHOICES, ALERT_DEFAULT_MINUTES, TOAST_MS, get announcedKey() { return announcedKey; }, set announcedKey(value) { announcedKey = value; } };`
+      ? `${pieces.join('\n')}\nreturn { alert, alertPlan, peakState, startAlertClock, readAlertSettings, writeAlertSettings, notifySupport, closeToast, showToast, renderAlertControls, text, ALERT_CHOICES, ALERT_DEFAULT_MINUTES, TOAST_MS, get notifyHint() { return notifyHint; }, get announcedKey() { return announcedKey; }, set announcedKey(value) { announcedKey = value; } };`
       : null;
     if (alertSource === null) {
       fail(2, 'client.js no longer has extractable policy/text/alert regions, so the clock could not be driven. This says nothing about whether it is correct.');
@@ -722,8 +722,29 @@ if (policy !== undefined) {
         interval(fn, ms) { const entry = { fn, ms }; intervals.push(entry); return () => { const at = intervals.indexOf(entry); if (at >= 0) intervals.splice(at, 1); }; },
         timeout(fn, ms) { const entry = { fn, ms }; timeouts.push(entry); return () => { const at = timeouts.indexOf(entry); if (at >= 0) timeouts.splice(at, 1); }; },
       };
-      const api = new Function('window', 'document', 'ensureStyles', 'PACKAGE_ID', 'Date', alertSource)(
-        window, document, () => {}, '@tuoluosuan/dsh-peak-badge', FakeDate,
+      // The `view` region builds its nodes through a tiny `h` and wraps the two
+      // components in `React.memo`. Neither is the subject here: the row under test
+      // is produced by plain function calls, so a memo that just returns its
+      // argument and an `h` that records props are enough to read the result.
+      const React = { memo: (component) => component };
+      const h = (type, props, ...kids) => {
+        if (typeof type === 'function') return type(Object.assign({}, props, { children: kids }));
+        const node = makeElement(type);
+        for (const [key, value] of Object.entries(props || {})) {
+          if (key === 'children') continue;
+          if (key === 'className') node.className = String(value);
+          else if (key === 'style') node.style = value;
+          else node[key] = value;
+        }
+        for (const kid of kids.flat()) {
+          if (kid === null || kid === undefined || kid === false) continue;
+          if (typeof kid === 'string' || typeof kid === 'number') node.textContent += String(kid);
+          else node.append(kid);
+        }
+        return node;
+      };
+      const api = new Function('window', 'document', 'ensureStyles', 'PACKAGE_ID', 'Date', 'React', 'h', alertSource)(
+        window, document, () => {}, '@tuoluosuan/dsh-peak-badge', FakeDate, React, h,
       );
       const ctx = { get: () => undefined };
       return {
@@ -807,9 +828,42 @@ if (policy !== undefined) {
       live.api.writeAlertSettings();
       live.api.alert.leadMinutes = live.api.ALERT_DEFAULT_MINUTES;
       live.api.alert.notify = false;
+      // A stored `true` is only honoured while the browser agrees. Set that up
+      // first, because a wish the browser contradicts is dropped on read.
+      live.FakeNotification.permission = 'granted';
       live.api.readAlertSettings();
       check('the lead survives a restart', String(live.api.alert.leadMinutes), '15');
       check('the notification choice survives too', String(live.api.alert.notify), 'true');
+
+      // And the other half of that rule: a stored `true` the browser will not
+      // honour is dropped, so the box can never show a tick that cannot fire.
+      // Note the order — the wish is stored while it IS granted (otherwise it
+      // would never reach the store at all) and then contradicted.
+      live = boot();
+      live.FakeNotification.permission = 'granted';
+      live.api.alert.notify = true;
+      live.api.writeAlertSettings();
+      live.api.alert.notify = false;
+      live.FakeNotification.permission = 'denied';
+      live.api.readAlertSettings();
+      check('a wish the browser refuses is dropped on read', String(live.api.alert.notify), 'false');
+      live = boot();
+      live.FakeNotification.permission = 'granted';
+      live.api.alert.notify = true;
+      live.api.writeAlertSettings();
+      live.api.alert.notify = false;
+      live.FakeNotification.permission = 'default';
+      live.api.readAlertSettings();
+      check('and so is a wish that was never granted', String(live.api.alert.notify), 'false');
+      // The control, so the two above cannot pass by the box simply never turning
+      // itself on: with the browser still agreeing, the same stored `true` sticks.
+      live = boot();
+      live.FakeNotification.permission = 'granted';
+      live.api.alert.notify = true;
+      live.api.writeAlertSettings();
+      live.api.alert.notify = false;
+      live.api.readAlertSettings();
+      check('a wish the browser still honours comes back', String(live.api.alert.notify), 'true');
       live.store.set('@tuoluosuan/dsh-peak-badge/alert', '{"leadMinutes":3}');
       live.api.alert.leadMinutes = 15;
       live.api.readAlertSettings();
@@ -855,6 +909,125 @@ if (policy !== undefined) {
       check('both together raise one system notice', String(live.sent.length), '1');
       check('the system notice is tagged with the boundary',
         String(live.sent[0].options.tag.includes('2026-08-19')), 'true');
+
+      // The notification row, rendered. A press that ends in `denied` — or in
+      // `default`, which is what a dismissed prompt leaves behind — used to leave
+      // no trace at all: the box sprang back and the card said nothing, which is
+      // indistinguishable from a control that does not work. The row now always
+      // carries its own status, so these assertions are about words being present,
+      // not about a behaviour that only shows up in a screenshot.
+      const find = (node, match) => {
+        if (match(node)) return node;
+        for (const kid of node.children) {
+          const hit = find(kid, match);
+          if (hit !== undefined) return hit;
+        }
+        return undefined;
+      };
+      const rowOf = (setup) => {
+        const box = boot();
+        if (typeof setup === 'function') setup(box);
+        const node = box.api.renderAlertControls(() => {});
+        const label = find(node, (child) => child.className === 'peak-badge-check');
+        const note = label === undefined ? undefined : find(label, (child) => child.className === 'peak-badge-note');
+        const input = label === undefined ? undefined : find(label, (child) => child.tagName === 'INPUT');
+        return {
+          note: note === undefined ? null : textOf(note),
+          disabled: input === undefined ? null : input.disabled,
+          input,
+          box,
+        };
+      };
+
+      live = boot();
+      live.FakeNotification.permission = 'default';
+      let row = rowOf();
+      check('an untouched box explains how to turn it on',
+        String(row.note === live.api.text.notifyNotePrompt), 'true');
+      check('and it is pressable', String(row.disabled), 'false');
+
+      live = boot();
+      live.FakeNotification.permission = 'denied';
+      row = rowOf((box) => { box.FakeNotification.permission = 'denied'; });
+      check('a refused box says it was refused, not nothing',
+        String(row.note === live.api.text.notifyNoteDenied), 'true');
+      check('a refusal is not a dead control', String(row.disabled), 'false');
+
+      live = boot();
+      row = rowOf((box) => { box.window.Notification = undefined; });
+      check('a missing API says so',
+        String(row.note === live.api.text.notifyNoteUnsupported), 'true');
+      check('and that is the one case that is disabled', String(row.disabled), 'true');
+
+      // The press itself, through the handler the row installs: a granted answer
+      // ticks the box and clears the note, a refused one leaves a refusal behind.
+      // The stub moves `permission` before it resolves, the way a real browser
+      // does, because the row reads the state back rather than trusting the answer.
+      row = rowOf((box) => {
+        box.FakeNotification.requestPermission = () => {
+          box.FakeNotification.permission = 'denied';
+          return Promise.resolve('denied');
+        };
+      });
+      let input = row.input;
+      input.checked = true;
+      input.onChange({ target: input });
+      await Promise.resolve();
+      await Promise.resolve();
+      check('a refused press turns the box back off', String(row.box.api.alert.notify), 'false');
+      check('and leaves a refusal to read', String(row.box.api.notifyHint), 'denied');
+      // The same box, drawn again after the refusal: the note has to change with
+      // it, because a row that reverts in silence is the bug this section exists
+      // for.
+      {
+        const again = row.box.api.renderAlertControls(() => {});
+        const label = find(again, (child) => child.className === 'peak-badge-check');
+        const note = find(label, (child) => child.className === 'peak-badge-note');
+        check('and the redrawn row says it was refused',
+          String(note !== undefined && textOf(note) === row.box.api.text.notifyNoteDenied), 'true');
+      }
+
+      row = rowOf((box) => {
+        box.FakeNotification.requestPermission = () => {
+          box.FakeNotification.permission = 'granted';
+          return Promise.resolve('granted');
+        };
+      });
+      input = row.input;
+      input.checked = true;
+      input.onChange({ target: input });
+      await Promise.resolve();
+      await Promise.resolve();
+      check('a granted press turns it on', String(row.box.api.alert.notify), 'true');
+      check('and the note is gone', String(row.box.api.notifyHint), 'null');
+      // The same grant in the other shape. Modern engines answer with the
+      // permission STRING, legacy ones pass a boolean to a callback; reading only
+      // the boolean silently discarded every modern grant.
+      row = rowOf((box) => {
+        box.FakeNotification.requestPermission = (callback) => {
+          box.FakeNotification.permission = 'granted';
+          callback(true);
+        };
+      });
+      input = row.input;
+      input.checked = true;
+      input.onChange({ target: input });
+      check('a granted press in the callback shape works too', String(row.box.api.alert.notify), 'true');
+      // And a promise that resolves with the string `'denied'`: the box must go
+      // back off and say so.
+      row = rowOf((box) => {
+        box.FakeNotification.requestPermission = () => {
+          box.FakeNotification.permission = 'denied';
+          return Promise.resolve('denied');
+        };
+      });
+      input = row.input;
+      input.checked = true;
+      input.onChange({ target: input });
+      await Promise.resolve();
+      await Promise.resolve();
+      check('a denied string turns it back off', String(row.box.api.alert.notify), 'false');
+      check('and is reported as a refusal', String(row.box.api.notifyHint), 'denied');
     }
   }
 
@@ -926,7 +1099,7 @@ if (policy !== undefined) {
       check('every block comment inside it is opened and closed in there too', balanced, 'balanced');
       // A count, because a rule that got swallowed by a stray delimiter would leave
       // the rest of the literal intact: every other check here would still pass.
-      // 34 rules as of 0.1.5. Raise it when rules are added, never lower it to make
+      // 34 rules as of 0.1.6. Raise it when rules are added, never lower it to make
       // a run go green.
       check('every one of its 34 rules is still there',
         String([...literal.matchAll(/([^{}]+)\{/g)].length), '34');
@@ -938,7 +1111,7 @@ if (policy !== undefined) {
   // otherwise print "0 passed, 0 failed" and exit 0 — the loudest possible
   // silence. Raise it when cases are added; lowering it is the one edit that can
   // quietly disarm this tripwire, so do that only on purpose.
-  const FLOOR = 183;
+  const FLOOR = 200;
   if (passed < FLOOR && failed === 0) {
     console.error(`only ${passed} cases ran, below the expected floor of ${FLOOR} — a section has stopped running.`);
     process.exitCode = 1;
