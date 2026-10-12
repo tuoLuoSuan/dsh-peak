@@ -858,12 +858,87 @@ if (policy !== undefined) {
     }
   }
 
+  console.log('\n--- the file is a module the loader can actually load ---');
+  {
+    // Everything above reads client.js as TEXT: the policy is sliced out of the
+    // file and compiled on its own, and the stylesheet is matched with regular
+    // expressions. So a client.js that cannot be loaded at all passed all of it.
+    // That is not a hypothetical: version 0.1.4 shipped with a backtick inside the
+    // CSS template literal, which closed the literal early and made the whole
+    // bundle a SyntaxError, while this script printed "176 passed, 0 failed" and
+    // the harness rendered seven perfectly good screenshots. The failure was
+    // reported by the application instead, as a load error with an empty card.
+    //
+    // The file is therefore EXECUTED here, against the smallest honest stand-in
+    // for the browser: the loader call at the top level and a `window` to hang it
+    // on. Nothing else runs at import time — the factory only registers, which is
+    // the behaviour the real loader depends on.
+    let registered;
+    let loaded = 'yes';
+    try {
+      const evaluate = new Function('window', `${source}\n`);
+      evaluate({
+        __ModuleLoader__: {
+          load(module) {
+            registered = module;
+          },
+        },
+      });
+    } catch (error) {
+      // The file cannot be compiled at all, so every check below would report on a
+      // string that does not exist. Report the real message — it is the one the
+      // application shows — and stop asking.
+      loaded = 'no';
+      check('client.js is a file the browser can compile', error.message, 'it compiles');
+    }
+    if (loaded === 'yes') {
+      check('the loader call at the top level registers a module', registered === undefined ? 'no' : 'yes', 'yes');
+      check('the registered id is the package id the profile installs',
+        registered === undefined ? 'none' : String(registered.id), '@tuoluosuan/dsh-peak-badge');
+      check('the registered module exposes a factory',
+        registered === undefined ? 'none' : typeof registered.factory, 'function');
+
+      // The stylesheet has to survive as one piece. A backtick is the failure mode
+      // above. The second one is subtler: the literal's contents are CSS, not
+      // source, so a block comment written in there is closed only if it is opened
+      // in there too — an unpaired closer ends a comment the surrounding JavaScript
+      // opened, and everything after it is compiled as code. The comments must
+      // therefore be balanced, not absent: this stylesheet legitimately explains
+      // four of its rules.
+      const literalStart = source.indexOf('const CSS = `');
+      const literalEnd = source.indexOf('`;', literalStart);
+      check('the stylesheet is written as one template literal',
+        literalStart < 0 || literalEnd < 0 ? 'not found' : 'found', 'found');
+      const literal = literalStart < 0 || literalEnd < 0
+        ? ''
+        : source.slice(literalStart + 'const CSS = `'.length, literalEnd);
+      check('nothing inside it closes the literal', String(literal.includes('`')), 'false');
+      const balanced = (() => {
+        let index = 0;
+        let open = false;
+        for (;;) {
+          const next = literal.indexOf(open ? '*/' : '/*', index);
+          if (next < 0) return open ? 'unterminated' : 'balanced';
+          open = !open;
+          index = next + 2;
+        }
+      })();
+      check('every block comment inside it is opened and closed in there too', balanced, 'balanced');
+      // A count, because a rule that got swallowed by a stray delimiter would leave
+      // the rest of the literal intact: every other check here would still pass.
+      // 34 rules as of 0.1.5. Raise it when rules are added, never lower it to make
+      // a run go green.
+      check('every one of its 34 rules is still there',
+        String([...literal.matchAll(/([^{}]+)\{/g)].length), '34');
+    }
+  }
+
   console.log(`\n${passed} passed, ${failed} failed`);
   // A floor, not just `failed > 0`: a section that stops running entirely would
   // otherwise print "0 passed, 0 failed" and exit 0 — the loudest possible
   // silence. Raise it when cases are added; lowering it is the one edit that can
   // quietly disarm this tripwire, so do that only on purpose.
-  const FLOOR = 176;
+  const FLOOR = 183;
   if (passed < FLOOR && failed === 0) {
     console.error(`only ${passed} cases ran, below the expected floor of ${FLOOR} — a section has stopped running.`);
     process.exitCode = 1;

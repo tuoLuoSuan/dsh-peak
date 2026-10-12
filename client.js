@@ -454,7 +454,7 @@ window.__ModuleLoader__.load({
     // `color-mix()` percentage arguments are `<percentage> | <calc-sum>`, so a
     // weight that follows the wallpaper's opacity is expressible — but only in some
     // spellings. Measured in the engine this ships to (Edge/Chromium, via
-    // `.tmp-probe3.mjs`), `calc(25% * (1 - var(--we-wallpaper-opacity, 0)))` is
+    // `.tmp-probe3.mjs`), `calc((100% - var(--we-wallpaper-opacity, 0)) * 25%)` is
     // ACCEPTED BY CSS.supports() AND THEN SILENTLY DROPPED at computed-value time,
     // which leaves the plain declaration above as the fill and therefore no tint at
     // all — a failure that looks exactly like a working tint in a screenshot.
@@ -464,6 +464,12 @@ window.__ModuleLoader__.load({
     // fallback and the declaration still parses; a `var()` that resolved to NOTHING
     // would make the declaration invalid at computed-value time and drop the fill to
     // `transparent`, which is the exact failure this component is written to avoid.
+    //
+    // Nothing in the literal below may contain a backtick. Inside it the contents are
+    // CSS, not source: prose written there is compiled as CSS, and a backtick ends
+    // the literal early, which is a SyntaxError reported at the prose. Version 0.1.4
+    // broke exactly that way, so the card's comment about the settings rows keeping
+    // the dialog role lives up here instead, and the verifier now refuses the file.
     const CSS = `
 .peak-badge-root { position: relative; display: inline-flex; }
 .peak-badge-chip {
@@ -522,9 +528,6 @@ body[data-ds-dark-theme] .peak-badge-card {
 .peak-badge-value[data-tone="peak"] { color: var(--dsw-alias-state-warn-primary); }
 .peak-badge-value[data-tone="off"] { color: var(--dsw-alias-label-secondary); }
 .peak-badge-foot { font-size: 11px; line-height: 1.5; color: var(--dsw-alias-label-secondary); }
-/* The two settings rows. They sit under the facts and above the sentence, and
-   they are the only interactive part of the card — which is why the card keeps
-   `role="dialog"` rather than pretending to be a menu. */
 .peak-badge-controls {
   display: flex; flex-direction: column; gap: 6px;
   border-top: 1px solid var(--dsw-alias-border-l1); padding-top: 6px;
