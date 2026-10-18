@@ -100,7 +100,7 @@ function loadProbe() {
   if (!reached) {
     return { verdict: 1, detail: `${result.state} — the browser could not load client.js` }
   }
-  if (result.id !== '@tuoluosuan/dsh-peak-badge') {
+  if (result.id !== 'dsh-peak') {
     return { verdict: 1, detail: `the bundle registered itself as ${result.id}` }
   }
   if (result.factoryType !== 'function') {

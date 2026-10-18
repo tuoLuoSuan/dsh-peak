@@ -1,4 +1,4 @@
-// Verification for the @tuoluosuan/dsh-peak-badge policy.
+// Verification for the dsh-peak policy.
 //
 //   node verify-policy.mjs            # run the cases
 //   node verify-policy.mjs --dump     # also print the extracted code
@@ -744,7 +744,7 @@ if (policy !== undefined) {
         return node;
       };
       const api = new Function('window', 'document', 'ensureStyles', 'PACKAGE_ID', 'Date', 'React', 'h', alertSource)(
-        window, document, () => {}, '@tuoluosuan/dsh-peak-badge', FakeDate, React, h,
+        window, document, () => {}, 'dsh-peak', FakeDate, React, h,
       );
       const ctx = { get: () => undefined };
       return {
@@ -864,11 +864,11 @@ if (policy !== undefined) {
       live.api.alert.notify = false;
       live.api.readAlertSettings();
       check('a wish the browser still honours comes back', String(live.api.alert.notify), 'true');
-      live.store.set('@tuoluosuan/dsh-peak-badge/alert', '{"leadMinutes":3}');
+      live.store.set('dsh-peak/alert', '{"leadMinutes":3}');
       live.api.alert.leadMinutes = 15;
       live.api.readAlertSettings();
       check('a lead outside the choices is ignored', String(live.api.alert.leadMinutes), '15');
-      live.store.set('@tuoluosuan/dsh-peak-badge/alert', 'not json');
+      live.store.set('dsh-peak/alert', 'not json');
       live.api.readAlertSettings();
       check('an unparseable preference is ignored', String(live.api.alert.leadMinutes), '15');
 
@@ -1067,7 +1067,7 @@ if (policy !== undefined) {
     if (loaded === 'yes') {
       check('the loader call at the top level registers a module', registered === undefined ? 'no' : 'yes', 'yes');
       check('the registered id is the package id the profile installs',
-        registered === undefined ? 'none' : String(registered.id), '@tuoluosuan/dsh-peak-badge');
+        registered === undefined ? 'none' : String(registered.id), 'dsh-peak');
       check('the registered module exposes a factory',
         registered === undefined ? 'none' : typeof registered.factory, 'function');
 

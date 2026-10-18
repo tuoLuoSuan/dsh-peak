@@ -21,7 +21,7 @@ import { delimiter, dirname, join, resolve } from 'node:path'
 
 const PROFILE = '__npm_probe_peak__'
 const HOME = process.env.USERPROFILE ?? process.env.HOME
-const PACKAGE = '@tuoluosuan/dsh-peak-badge'
+const PACKAGE = 'dsh-peak'
 
 /*
  * The default is the registry spec, not a local tarball. Installing the version

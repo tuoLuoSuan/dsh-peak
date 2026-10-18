@@ -1,4 +1,4 @@
-// Client half of @tuoluosuan/dsh-peak-badge.
+// Client half of dsh-peak.
 //
 // Shows whether DeepSeek's API pricing is in its peak or off-peak window right
 // now, as a compact chip at the left of the composer tool row. Clicking it
@@ -26,11 +26,11 @@
 // appears twice — this call and the `PACKAGE_ID` inside the factory — and the two
 // must be changed together.
 window.__ModuleLoader__.load({
-  id: '@tuoluosuan/dsh-peak-badge',
+  id: 'dsh-peak',
   factory(require) {
     const React = require('react');
     const h = React.createElement;
-    const PACKAGE_ID = '@tuoluosuan/dsh-peak-badge';
+    const PACKAGE_ID = 'dsh-peak';
 
     // #region policy
 

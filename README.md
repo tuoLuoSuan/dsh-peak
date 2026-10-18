@@ -88,11 +88,14 @@ profile 名就是侧栏「工作区」对应的那个（桌面端默认 `desktop
 ### 装 npm 上的版本
 
 ```
-dsh plugin --profile desktop add @tuoluosuan/dsh-peak-badge@0.1.6
+dsh plugin --profile desktop add dsh-peak@0.2.0
 ```
 
-**`@tuoluosuan` 不能省。** npm 上那个裸名字 `dsh-peak-badge` 是**别人的包**
-（`mj5809`，停在 0.1.1，不是本项目），省掉 scope 装到的是另一个插件。
+**别装成 `dsh-peak-badge`。** 那个裸名字是**别人的包**（`mj5809`，停在 0.1.1，不是本项目）——
+本项目是 `dsh-peak`，一字之差装到的是另一个插件。
+
+这个包以前叫 `@tuoluosuan/dsh-peak-badge`；0.2.0 起改名成 `dsh-peak`，旧名字停在 0.1.x。
+两者代码同源，改名只是为了让市场里那张卡片显示成一行。
 
 npm 上那份跟这个仓库同源，但不会自动跟着 `main` 走，想拿到新版本得等下一次发布。
 
@@ -138,7 +141,7 @@ plugin_manager action: install_bundle target: D:\path\to\dsh-peak-badge
 
 ```
 plugin_manager action: list_bundles
-plugin_manager action: remove_bundle target: @tuoluosuan/dsh-peak-badge
+plugin_manager action: remove_bundle target: dsh-peak
 ```
 
 `list_plugins` 里应该能看到这个包且 `fiberPhase: active`。
@@ -288,7 +291,7 @@ TZ=Pacific/Kiritimati   node verify-policy.mjs
 
 `meta.title` / `meta.description` 由平台从 `locale/<语言>.json` 读，读不到就退回
 `package.json` 的 `name` / `description`，所以没有这两个文件时，插件列表里显示的是
-`@tuoluosuan/dsh-peak-badge` 这种模块名。`exports` 里必须放开 `./locale/*.json`，
+`dsh-peak` 这种模块名。`exports` 里必须放开 `./locale/*.json`，
 否则平台的解析器拿不到它（`exports` 是白名单）。
 
 `client.js` 用 `#region` 分成五段：`policy`（纯函数，可单独抠出来执行）、
