@@ -88,8 +88,11 @@ profile 名就是侧栏「工作区」对应的那个（桌面端默认 `desktop
 ### 装 npm 上的版本
 
 ```
-dsh plugin --profile desktop add @tuoluosuan/dsh-peak-badge@0.1.3
+dsh plugin --profile desktop add @tuoluosuan/dsh-peak-badge@0.1.6
 ```
+
+**`@tuoluosuan` 不能省。** npm 上那个裸名字 `dsh-peak-badge` 是**别人的包**
+（`mj5809`，停在 0.1.1，不是本项目），省掉 scope 装到的是另一个插件。
 
 npm 上那份跟这个仓库同源，但不会自动跟着 `main` 走，想拿到新版本得等下一次发布。
 
