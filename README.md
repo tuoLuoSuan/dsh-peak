@@ -2,7 +2,7 @@
 
 点一下就知道现在 DeepSeek 是按**高峰价**还是**空闲价**计费。
 
-<img src="https://raw.githubusercontent.com/tuoLuoSuan/dsh-peak-badge/main/docs/composer.png" width="1000" alt="输入框工具行最左边的胶囊">
+<img src="https://raw.githubusercontent.com/tuoLuoSuan/dsh-peak/main/docs/composer.png" width="1000" alt="输入框工具行最左边的胶囊">
 
 组件是一个小胶囊（chip），挂在输入框工具行的最左边（`conversation.input.left`）。
 胶囊左边一个小圆点，颜色跟着状态走：高峰是琥珀色，空闲是中性色。
@@ -13,27 +13,27 @@
 
 | 空闲（默认） | 高峰 | 深色主题 |
 |---|---|---|
-| <img src="https://raw.githubusercontent.com/tuoLuoSuan/dsh-peak-badge/main/docs/chip.png" width="300" alt="空闲"> | <img src="https://raw.githubusercontent.com/tuoLuoSuan/dsh-peak-badge/main/docs/chip-peak.png" width="300" alt="高峰"> | <img src="https://raw.githubusercontent.com/tuoLuoSuan/dsh-peak-badge/main/docs/chip-dark.png" width="300" alt="深色"> |
+| <img src="https://raw.githubusercontent.com/tuoLuoSuan/dsh-peak/main/docs/chip.png" width="300" alt="空闲"> | <img src="https://raw.githubusercontent.com/tuoLuoSuan/dsh-peak/main/docs/chip-peak.png" width="300" alt="高峰"> | <img src="https://raw.githubusercontent.com/tuoLuoSuan/dsh-peak/main/docs/chip-dark.png" width="300" alt="深色"> |
 
 点开的卡片，三个变体：中文空闲、中文高峰、英文空闲。中文空闲那张是**故意挑的最长的一种**：
 国庆节里离下个高峰还有 4 天，`下次切换` 这一行是整张卡片能印出的最宽的值。
 
 | 中文 · 空闲 | 中文 · 高峰 | English · off-peak |
 |---|---|---|
-| <img src="https://raw.githubusercontent.com/tuoLuoSuan/dsh-peak-badge/main/docs/card-off.png" width="312" alt="卡片：中文空闲"> | <img src="https://raw.githubusercontent.com/tuoLuoSuan/dsh-peak-badge/main/docs/card-peak.png" width="312" alt="卡片：中文高峰"> | <img src="https://raw.githubusercontent.com/tuoLuoSuan/dsh-peak-badge/main/docs/card-en.png" width="312" alt="卡片：英文"> |
+| <img src="https://raw.githubusercontent.com/tuoLuoSuan/dsh-peak/main/docs/card-off.png" width="312" alt="卡片：中文空闲"> | <img src="https://raw.githubusercontent.com/tuoLuoSuan/dsh-peak/main/docs/card-peak.png" width="312" alt="卡片：中文高峰"> | <img src="https://raw.githubusercontent.com/tuoLuoSuan/dsh-peak/main/docs/card-en.png" width="312" alt="卡片：英文"> |
 
 底部那一行 `系统通知` 有四种状态，每种都把话写在勾选框旁边。左边是权限被拒（**还能再点一次**），
 右边是这台机器根本没有通知接口（**唯一会变灰的那种**）：
 
 | 权限被拒 | 没有通知接口 |
 |---|---|
-| <img src="https://raw.githubusercontent.com/tuoLuoSuan/dsh-peak-badge/main/docs/card-denied.png" width="312" alt="卡片：权限被拒绝"> | <img src="https://raw.githubusercontent.com/tuoLuoSuan/dsh-peak-badge/main/docs/card-unsupported.png" width="312" alt="卡片：没有通知接口"> |
+| <img src="https://raw.githubusercontent.com/tuoLuoSuan/dsh-peak/main/docs/card-denied.png" width="312" alt="卡片：权限被拒绝"> | <img src="https://raw.githubusercontent.com/tuoLuoSuan/dsh-peak/main/docs/card-unsupported.png" width="312" alt="卡片：没有通知接口"> |
 
 还差几分钟要切换时，右下角会主动弹一条，不用你去点开卡片：
 
 | 要进高峰了 | 要进空闲了 | 深色主题 |
 |---|---|---|
-| <img src="https://raw.githubusercontent.com/tuoLuoSuan/dsh-peak-badge/main/docs/alert-peak.png" width="312" alt="提醒：即将进入高峰"> | <img src="https://raw.githubusercontent.com/tuoLuoSuan/dsh-peak-badge/main/docs/alert-off.png" width="312" alt="提醒：即将进入空闲"> | <img src="https://raw.githubusercontent.com/tuoLuoSuan/dsh-peak-badge/main/docs/alert-peak-dark.png" width="312" alt="提醒：深色"> |
+| <img src="https://raw.githubusercontent.com/tuoLuoSuan/dsh-peak/main/docs/alert-peak.png" width="312" alt="提醒：即将进入高峰"> | <img src="https://raw.githubusercontent.com/tuoLuoSuan/dsh-peak/main/docs/alert-off.png" width="312" alt="提醒：即将进入空闲"> | <img src="https://raw.githubusercontent.com/tuoLuoSuan/dsh-peak/main/docs/alert-peak-dark.png" width="312" alt="提醒：深色"> |
 
 ## 切换前提醒
 
@@ -80,7 +80,7 @@
 跟着 `main` 分支走，不经过 npm，推荐。
 
 ```
-dsh plugin --profile desktop add github:tuoLuoSuan/dsh-peak-badge
+dsh plugin --profile desktop add github:tuoLuoSuan/dsh-peak
 ```
 
 profile 名就是侧栏「工作区」对应的那个（桌面端默认 `desktop`）。
@@ -122,7 +122,7 @@ node docs/probe-npm-install.mjs
 ### 在对话里让 DSH 自己装
 
 ```
-plugin_manager action: install_bundle target: github:tuoLuoSuan/dsh-peak-badge
+plugin_manager action: install_bundle target: github:tuoLuoSuan/dsh-peak
 ```
 
 ### 本地开发

@@ -38,7 +38,7 @@ const PACKAGE = 'dsh-peak'
  * this". Naming the version makes the probe test the thing under test; the
  * assertion below then checks that what landed is what we meant to ship.
  *
- * `dsh plugin add github:tuoLuoSuan/dsh-peak-badge` takes a different road and
+ * `dsh plugin add github:tuoLuoSuan/dsh-peak` takes a different road and
  * is not subject to the cooldown, which is why the README keeps both.
  */
 const local = JSON.parse(readFileSync(resolve('package.json'), 'utf8'))

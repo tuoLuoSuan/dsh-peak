@@ -15,11 +15,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tuoLuoSuan/dsh-peak-badge.git"
+    "url": "git+https://github.com/tuoLuoSuan/dsh-peak.git"
   },
-  "homepage": "https://github.com/tuoLuoSuan/dsh-peak-badge#readme",
+  "homepage": "https://github.com/tuoLuoSuan/dsh-peak#readme",
   "bugs": {
-    "url": "https://github.com/tuoLuoSuan/dsh-peak-badge/issues"
+    "url": "https://github.com/tuoLuoSuan/dsh-peak/issues"
   },
   "files": [
     "client.js",
