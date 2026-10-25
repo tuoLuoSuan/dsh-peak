@@ -1,6 +1,6 @@
 {
   "name": "dsh-peak",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Peak / off-peak billing badge for the DeepSeek API. Sits in the DSH composer and works out the rate from your own clock.",
   "license": "MIT",
   "author": "tuoLuoSuan",

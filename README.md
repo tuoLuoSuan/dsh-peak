@@ -88,7 +88,7 @@ profile 名就是侧栏「工作区」对应的那个（桌面端默认 `desktop
 ### 装 npm 上的版本
 
 ```
-dsh plugin --profile desktop add dsh-peak@0.2.0
+dsh plugin --profile desktop add dsh-peak@0.2.1
 ```
 
 **别装成 `dsh-peak-badge`。** 那个裸名字是**别人的包**（`mj5809`，停在 0.1.1，不是本项目）——
@@ -98,6 +98,10 @@ dsh plugin --profile desktop add dsh-peak@0.2.0
 两者代码同源，改名只是为了让市场里那张卡片显示成一行。
 
 npm 上那份跟这个仓库同源，但不会自动跟着 `main` 走，想拿到新版本得等下一次发布。
+
+`0.2.1` 只改了一处元数据：包里的 `repository` 指向新仓库名 `tuoLuoSuan/dsh-peak`（0.2.0 里还是改名前的
+`dsh-peak-badge`）。代码没变。这一项对外是有用的——插件目录判断「这个仓库在 npm 上叫什么」时，会核对
+npm 包里的 `repository` 是否指回同一个仓库，字段对不上就只能退回 `github:` 的装法。
 
 版本号是故意写上的。pnpm 11 内置一个 24 小时的发版冷却期（`minimumReleaseAge`），这段时间里
 **裸包名不解析到 `latest`**，而是解析到冷却期之外最新的那一版——命令照样成功、照样打印一行 `+`，
