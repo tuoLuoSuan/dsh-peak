@@ -224,10 +224,12 @@
   const SAMPLE = peak
     ? { label: COPY.peak, status: 'peak', dateText: '2026-08-19', weekday: 3,
         rate: COPY.rateStandard,
+        chip: en ? 'Peak · 17h 30min' : '峰时 · 17小时30分钟',
         next: en ? 'tomorrow 09:00 (17 h 30 min)' : '明天 09:00（17 小时 30 分钟）',
         reason: COPY.peakReason }
     : { label: COPY.off, status: 'off', dateText: '2026-10-03', weekday: 6,
         rate: COPY.rateOffPeak,
+        chip: en ? 'Off-peak · 3d 22h' : '谷时 · 3天22小时',
         next: en ? 'in 4 days 09:00 (3 d 22 h)' : '4 天后 09:00（3 天 22 小时）',
         reason: en ? 'Statutory holiday: 国庆节. Billed off-peak all day.' : '法定节假日：国庆节，全天按空闲时段计价。' };
 
@@ -330,11 +332,11 @@
     const root = el('div', { class: 'peak-badge-root' },
       el('button', {
         type: 'button', class: 'peak-badge-chip', 'data-status': SAMPLE.status,
-        'data-dsh-peak-badge': 'chip', title: COPY.title,
+        'data-dsh-peak-badge': 'chip', title: `${COPY.title}${en ? ': ' : '：'}${SAMPLE.chip}`,
         'aria-expanded': showCard ? 'true' : 'false', 'aria-haspopup': 'dialog',
       },
         el('span', { class: 'peak-badge-dot', 'aria-hidden': 'true' }),
-        el('span', { text: SAMPLE.label })));
+        el('span', { text: SAMPLE.chip })));
     if (showCard) root.append(renderCard());
     seat.append(root);
   }

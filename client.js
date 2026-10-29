@@ -1248,6 +1248,25 @@ body[data-ds-dark-theme] .peak-badge-select { background: var(--dsw-static-neutr
           ? text.pending
           : state.reason === 'weekendUncovered' ? text.nextBeyondTable : text.beyondHorizon;
 
+      // The chip carries the countdown too, so the remaining time is readable
+      // without opening the card. `next` is the same edge the card prints under
+      // 下次切换 — the window close while in peak, the next peak open while
+      // off-peak — so the two can never disagree. It has to stay short: the chip
+      // shares the composer tool row, so days are stated as whole hours and a
+      // whole hour drops its `0 分钟` tail. The card keeps the exact wording.
+      const compactGap = (minutes) => {
+        const total = Math.max(0, Math.ceil(minutes));
+        const days = Math.floor(total / 1440);
+        const hours = Math.floor((total % 1440) / 60);
+        const rest = total % 60;
+        const english = i18n.lang === 'en';
+        const join = (parts) => (english ? parts.join(' ') : parts.join(''));
+        if (days > 0) return join([`${days}${text.day}`, `${hours}${text.hour}`]);
+        if (hours > 0) return rest > 0 ? join([`${hours}${text.hour}`, `${rest}${text.minute}`]) : `${hours}${text.hour}`;
+        return `${rest}${text.minute}`;
+      };
+      const chipLabel = state.next === undefined ? label : `${label} · ${compactGap(state.next.leftMinutes)}`;
+
       /**
        * Close the card when the pointer goes down anywhere outside it.
        *
@@ -1298,14 +1317,14 @@ body[data-ds-dark-theme] .peak-badge-select { background: var(--dsw-static-neutr
           className: 'peak-badge-chip',
           'data-status': status,
           'data-dsh-peak-badge': 'chip',
-          title: `${text.title}${i18n.lang === 'en' ? ': ' : '：'}${label}`,
+          title: `${text.title}${i18n.lang === 'en' ? ': ' : '：'}${chipLabel}`,
           'aria-expanded': open,
           'aria-haspopup': 'dialog',
           'aria-controls': open ? CARD_ID : undefined,
           onClick: () => setOpen((value) => !value),
         },
           h('span', { className: 'peak-badge-dot', 'aria-hidden': true }),
-          h('span', null, label)),
+          h('span', null, chipLabel)),
         open
           ? h('div', {
               id: CARD_ID,
